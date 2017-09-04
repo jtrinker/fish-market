@@ -1,0 +1,93 @@
+STATE::
+
+State is a representation of all the data in the app.
+    -Each comp. can have its own state, but think of it as an object that manages all data
+    -we have state in our fish, in our order summary, etc. Data is being managed all over
+
+State is essentially a master object, where all data is stored and managed.
+    -whenever we want to change data on the page, we edit our state and let react change the HTML for us.
+    -this way we don't have to keep track of every single place in the view where a piece of data is being referenced and
+     update them individually, we change the data once in react and react updates the view everywhere its referenced.
+    
+So we created our fish object in AddFishForm. When you click the button a js object is created with all the vlaues of the inputs.
+
+How do we get this object into our state?
+    -State is always tied to a specific component, in this case, the <App /> component
+    -Each component can have its own state, but a lot of the time you need to share state b/t components
+    -In our case we want to share state b/t <Inventory />, <Order />, and <FishList />, which is why its good to store
+     state in a parent component such as <App />
+
+First we need to GetInitialState -- react needs to know what to expect, this establishes the groundwork for state
+    -we do this by calling a constructor when we initialize our class in the <App /> component
+        constructor() {
+            super(); // can't use 'this' until we call super.
+            this.state = {
+                fishes: {},
+                order: {}
+            }
+        }
+
+How does our fish object get from <AddFishForm /> to the state object inside <App /> ?
+    -create addFish() method in app that takes one argument, fish.
+    -this method needs to update our state and set our state, and react makes us do a few things to make this happen
+    -it is best practice to make a copy of your current state and then update your state
+        addFish(fish) {
+            const fishes = {...this.state.fishes};
+        }
+    -What is {...this.state.fishes}; ?
+        -this is our current state. If we had 6 fishes in our current state, we take those and put them into a new state.
+        - ... is a spread. It takes the 6 fishes and spreads them into our object. It basically is taking a copy of our
+         current state and puts it into a new state called 'fishes'
+    -now we add in our new fish. And we'll use a timestamp as our key so that its unique and incremental and we can easily order
+     the items in the state object.
+        addFish(fish) {
+            // update our current state
+            const fishes = {...this.state.fishes};
+
+            // add new fish
+            const timestamp = Date.now();
+            fishes[`fish-${timestamp}`] = fish;
+        }
+    -now we have updated the state object and added our new fish, but the new fish hasn't yet been added to our state.
+        -we do this by explicity telling react which state we would like to update
+        -we don't want to update our entire state object bc react doesn't want to have to check everything currently in state
+         so this isn't a good idea:
+            this.setState(state;)
+        -instead we can just tell react which part of state changed
+            this.setState({ fishes: fishes });
+    -now we can test this by manually calling the addFish method in the console
+        $r.addFish({name: "ball fish", price: 5000});
+    -then if we look in the react dev tools inside of state we have a new fish.
+
+    -How do we get <AddFishForm />, a child component, up to <App /> ?
+        -we do this with props
+        -we have the addFish() method on <App /> but how do we call it from a component thats a couple levels deep, from
+         <Inventory /> ?
+        -In <App /> we are rendering out <Inventory />. So were passing the function down from <App /> to <Inventory />
+            -now we can look in react dev tools and in <Inventory /> we can see that addFish() has been passed down in props
+    
+        *So we have a component <Inventory /> that is being rendered in side of a parent component <App />. In <App />
+         we have a method, addFish(), that we need to make available to <Inventory />.
+            -we simply place the addFish() method on the <Inventory /> component via props
+                <Inventory addFish={this.addFish} />
+            -this passes the function down to <Inventory />, making it props on the <Inventory /> component
+        *Now addFish() is available to <Inventory /> as props. But we have to go one level deeper to <AddFishForm />, so now
+         we can pass addFish() from <Inventory /> to <AddFishForm /> bc addFish() is on <Inventory /> as props.
+            -so inside of <Inventory />, we simply render 
+                <AddFishForm addFish={this.props.addFish};
+
+        *In React we pass data around via props. We first created props on <Inventory /> via <Inventory addFish={this.addFish} />
+            -now since addFish() is part of the props object, any child of <Inventory /> can gain access to the method by doing
+                <AddFishForm addFish={this.props.addFish}
+
+    -Lastly, on <AddFishForm />, after we create the new fish object, we can add the fish to state via addFish because we
+     passed it to the component via props.
+        -Now we can call the function after we create the new fish via
+            this.props.addFish(fish);
+
+    *We put addFish() on the <App /> component because that is where we are managing state. We want to have one large state object
+     at the parent level. This is why we didn't put the addFish() method on <Inventory />. We manage state from <App />. 
+        -addFish() isn't just adding a fish to some array, it is adding it to STATE, which we manage on the <App /> component.
+
+
+
