@@ -154,6 +154,47 @@ Now we can access those props and display them via JSX
 
     <li className="menu-fish">{this.props.details.name}</li>
 
+.........................................................................................
+
+UPDATING ORDER STATE
+
+We added a "Add To Order" button on the fish component. We need to hook this up so that its added to orders on state.
+
+-Remember, we manage state on parent component, <App />, so we need to put the addToOrder() function inside the <App />
+ component along with addFish()
+    -this function will take in a key to keep track of which fish is being added
+
+    addToOrder(key) {}
+    
+-Just like with addFish() we need to make a copy of our state
+
+    addToOrder(key) {
+        const order = {...this.state.order};
+    }
+
+-Then we need to add the order to our state object. But we need to first check to see if that type of fish is already in the order,
+ if it is, then we add 1 to the order, if its not we make it 1.
+
+    addToOrder(key) {
+        const order = {...this.state.order};
+        order[key] = order[key] + 1 || 1;
+    }
+
+-Then we just need to setState
+
+    addToOrder(key) {
+        const order = {...this.state.order};
+        order[key] = order[key] + 1 || 1;
+        this.setState({ order: order });
+    }
+
+-But how do we get a dynamic value into addToOrder(dynamic_value)?
+    -we can't just do
+
+        onClick={this.props.addToOrder(this.state.fishes[key])}
+
+    b/c this will run on page load, and we want it to run when someone clicks the button
+
 
 
 

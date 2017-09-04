@@ -12,6 +12,7 @@ class App extends React.Component {
         // any methods we want available to the component we have to bind to the constructor
         this.loadSamples = this.loadSamples.bind(this);
         this.addFish = this.addFish.bind(this);
+        this.addToOrder = this.addToOrder.bind(this);
 
         // getintitialstate -- this essentially creates an empty state object
         this.state = {
@@ -26,9 +27,18 @@ class App extends React.Component {
         });
     }
 
+    addToOrder(key) {
+        // make copy of current state
+        const order = {...this.state.order};
+        // add new fish to order; if fish type is already in order add 1 to the total.
+        order[key] = order[key] + 1 || 1;
+        //set state
+        this.setState({ order: order });
+    }
+
     // addFish is in <App /> because the addFish method adds to the state object, which is controlled from the parent, <App />
     addFish(fish) {
-        // copy current state and update state
+        // make copy of current state
         const fishes = {...this.state.fishes};
         // add our new fish
         const timestamp = Date.now();
@@ -46,7 +56,8 @@ class App extends React.Component {
                         {
                             Object
                                 .keys(this.state.fishes)
-                                .map(key => <Fish key={key} details={this.state.fishes[key]} />)
+                                .map(key => <Fish key={key} index={key} details={this.state.fishes[key]} 
+                                    addToOrder={this.addToOrder} />)
                         }
                     </ul>
                 </div> 
