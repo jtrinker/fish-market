@@ -89,5 +89,72 @@ How does our fish object get from <AddFishForm /> to the state object inside <Ap
      at the parent level. This is why we didn't put the addFish() method on <Inventory />. We manage state from <App />. 
         -addFish() isn't just adding a fish to some array, it is adding it to STATE, which we manage on the <App /> component.
 
+................................................................................................................................
+
+LOOPING OVER THE OBJECTS INSIDE STATE AND DISPLAYING THEM WITH JSX
+
+-We can use Object.keys() to loop over the fishes object inside of our state object.
+    -we can't use .map() initially because .map takes an array, and our fishes are an object
+    -But Object.keys(this.state.fishes) returns an array with made up of the keys of each fish value
+        ['fish1', 'fish2', etc]
+    -Now that we have an array we can loop over it with .map per usual. map() takes an array and then returns a second array
+
+        Object.keys(this.state.fishes).map(key => <Fish />);
+
+    -This will return (=>) a fish component for every key in the array.
+
+    ** the arrow function, => means 'return' **
+
+-This works and our sample fish are looped over and rendered to the screen, however, react yells at us in the console
+ saying that each child in an iterator should have a unique key. It says this because without a unique key react doesn't
+ know how to update a single fish, bc they all look the same.
+    -To fix this we just need to set a key and the key can be anything, including 'key'
+
+        .map(key => <Fish key={key} />);
+
+    -{key} will set the key on the <Fish /> component to the key in the array we looped over from Object.keys(this.state.fishes)
+    -Now if we load our sample data and look in our react dev tools we can see all the <Fish /> components that are being
+     displayed and they each have a numerical key identical to the key from the sample-fishes.
+
+        <Fish key="fish1"></Fish>
+        <Fish key="fish2"></Fish>
+        ...
+
+-Now we want the <Fish /> component to actually load the properties on each fish object. We can do this by targeting each
+ fish object in the array via the key and place this as props on the <Fish /> component
+
+    <Fish key={key} details={this.state.fishes[key]} />
+
+-Now there are details props under each fish component with all the properties on that fish.
+
+*SUMMARY
+
+To loop over something we first need an array. We get an array through
+
+    Object.keys(this.state.fishes)
+
+Now we can loop over the array with .map(), which can be passed anything, such as a list of keys, and return something else
+such as a list of <Fish /> components
+
+    .map(key => <Fish />)
+
+We then attach the proper key and property details to each fish component
+
+    .map(key => <Fish key={key} details{this.state.fishes[key]} />)
+
+...................
+
+Now we can  go into Fish.js and just start writing some HTML.
+
+-We added props to the <Fish /> component via 
+
+    <Fish details={this.state.fishes[key]} />
+
+Now we can access those props and display them via JSX
+
+    <li className="menu-fish">{this.props.details.name}</li>
+
+
+
 
 
