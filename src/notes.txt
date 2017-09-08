@@ -95,7 +95,7 @@ LOOPING OVER THE OBJECTS INSIDE STATE AND DISPLAYING THEM WITH JSX
 
 -We can use Object.keys() to loop over the fishes object inside of our state object.
     -we can't use .map() initially because .map takes an array, and our fishes are an object
-    -But Object.keys(this.state.fishes) returns an array with made up of the keys of each fish value
+    -But Object.keys(this.state.fishes) returns an array made up of the keys of each fish value
         ['fish1', 'fish2', etc]
     -Now that we have an array we can loop over it with .map per usual. map() takes an array and then returns a second array
 
@@ -137,6 +137,12 @@ Now we can loop over the array with .map(), which can be passed anything, such a
 such as a list of <Fish /> components
 
     .map(key => <Fish />)
+
+    which essentially outputs the following =>
+
+    ['fish1', 'fish2'].map(function (key) {
+        return React.createElement(Fish, null);
+    });
 
 We then attach the proper key and property details to each fish component
 
@@ -193,7 +199,251 @@ We added a "Add To Order" button on the fish component. We need to hook this up 
 
         onClick={this.props.addToOrder(this.state.fishes[key])}
 
-    b/c this will run on page load, and we want it to run when someone clicks the button
+    b/c this will run on page load, and we want it to run when someone clicks the button. So instead we do
+
+        onClick={() => this.addToOrder('fish-1')}
+
+    -But this still isn't dynamic. While we passed key in as props inside <App /> we can't access the key from <Fish />
+        -The key is for React, and React won't let us touch the key, so we have to explicitly pass it down.
+        -We can pass it down as any prop we want, for example:
+
+            .map(key => <Fish key={key} index={key} details={this.state.fishes[key]} addToOrder={this.addToOrder} />)
+
+        -we passed {key} down via the 'index' prop, so now we have access to the key through 'index'.
+            -index is for me, key is for react
+
+.........................................................................................
+
+DISPLAYING ORDER STATE
+
+Rather than create a new component we're going to implement a 'render function'
+    -we're not going to reuse the order functionality so no reason to make a component
+    -but we're starting to have a lot of code in the render() method, so we need to clean this up.
+    -We can do this by creating a separate render function that lives inside of our component
+    -Inside of render() we can do
+
+        {orderIds.map(this.renderOrder)}
+
+    -Then above the render() method, we can create a new method called renderOrder()
+
+        renderOrder(key) {
+            ...
+        }
+
+    .map will loop through orderIds and pass each one into this.renderOrder()
+
+.........................................................................................
+
+CONNECTING TO FIREBASE
+
+-When setting up the databse it may be helpful to change the read/write rules to true to remove authentication
+
+-In <App /> find your state object.
+    -note that order{} isn't going to be persisted to firebase because that will change per session. We will hook
+     users{} up to localStorage next section
+    -but we will be connecting to fishes{} object to firebase
+
+We're going to sync our fishes{} object with Firebase via the Rebase package.
+
+-create base.js file
+    -import re-base
+
+-we need to create our BASE. This is just a connection to the firebase database
+    -then we pass this base class the API key, domain we're connecting to, and the database url
+
+-import base class, from base.js, into <App />
+
+React Life Cycle Hooks:
+
+-When a component is rendered, or mounted into a page, React gives us entry points that we can 'hook' into and
+ do various things, like do an ajax request or check for certain properties, etc.
+    -we're going to use the 'componentWillMount' lifecycle hook to connect to rebase.
+    -componentWillMount will connect to firebase and sync our state up a split second before <App /> is loaded, it
+     is called before render()
+    
+-inside componentWillMount() we need to create a reference to the part of our state we want to sync with firebase
+
+    this.ref = base.syncstate(...)
+
+-syncstate() takes a string for the part of our state that we want to sync.
+    -we don't want to sync the whole database (fish-market) just the fishes in the store
+    -but to reference the fishes in the store we need the store name, which is random. But we can access it through
+     params on the props object inside <App />. React Router gave us these params props.
+
+    this.ref = base.syncState(`${this.props.params.storeId}/fishes`);
+
+Then we need to pass in an object that take 'context' and 'state' arguments.
+
+    this.ref = base.syncState(`${this.props.params.storeId}/fishes`
+    , {
+        context: this,
+        state: 'fishes'
+    });
+
+-If we switch from one store to another, or switch pages, then we need to stop syncing with the current store.
+    -otherwise we'll start racking up all these listeners and performance will go to shit.
+
+    componentWillUnmount() {
+        base.removeBinding(this.state);
+    }
+
+..........................................................
+
+SAVING OUR ORDER TO LOCALSTORAGE 
+
+-Setting items in localStorage
+    -We use the 'componentWillUpdate()' hook which runs code whenever state or props are changed. It will run before the
+     component is rendered
+Getting items from localStorage
+    -Inside of componentWillMount(), which is run when a component is loaded -- in our case when the page is loaded --
+     we check to see if there's anything in localStorage that we need to pull in.
+
+        const localStorageRef = localStorage.getItem(`order-${this.props.params.storeId}`);
+
+        if(localStorageRef) {
+            this.setState({
+                order: JSON.parse(localStorageRef)
+            });
+        }
+
+..........................................................
+
+LIVE EDITING AND 2-WAY DATA BINDING
+
+-Right now we have no way to edit our fish in inventory. We need to loop over our fish and populate each fish component
+ with the data for the fish that have already been created.
+    -This will change all components in realtime plus change our data in firebase
+-To do this we can loop over all of our fish inside the inventory component.
+    -Just like in <App /> we'll start with the Object.keys function to change our fishes object into an array that can 
+     be looped over with .map()
+    -first we need to pass down the fishes object to <Inventory /> via props
+        <Inventory fishes={this.state.fishes} />
+    -Inside of <Inventory /> we can then do 
+        Object.keys(this.props.fishes)
+    
+-Now we have an array of keys that we can pass to a render function.
+    Object.keys(this.props.fishes).map(this.renderInventory);
+
+    renderInventory(key) {
+        <p>{key}</p>
+    }
+
+    -now we know this works bc it prints out all of the keys of the fishes array
+    -now we can create actual HTML. 
+    -Remember when looping react requires key={key}
+
+    -Now we can fill in the form elements just like we had them in <AddFishForm /> with the addition of 'name' attribute
+
+        <div className="fish-edit key={key}>
+            <input type="text" placeholder="Fish Name" value={fish.name} name="name"} />
+            <input type="text" placeholder="Fish Price" value={fish.price} name="price"} />
+            <select value={fish.status} name="status" placeholder="Fish Status"}>
+                <option value="available">Fresh!</option>
+                <option value="unavailable">Sold Out.</option>
+            </select>
+            <textarea placeholder="Fish Desc" value={fish.desc} name="desc"}></textarea>
+            <input type="text" placeholder="Fish Image" value={fish.image} name="image"}/>
+        </div>
+
+-this gives us a warning in the console that says we provided a value without providing an onChange handler
+    -react doesn't want us sticking state -- {fish.name, etc} -- without having a plan for updatng it
+    -we need to tell react how we plan on updating said state, bc it wants one core area where our state is coming from
+     which is our state defined inside <App />
+
+-we need to put an onChange handler on each of the inputs and then update our corresponding state, which is held in <App />
+    -we need to put an onChange() event listener on each input that gives us an event argument.
+    -So we pass a function into onChange that handles the event (e)
+
+        <input type="text" placeholder="Fish Name" value={fish.name} name="name"} 
+         handleChange={(e) => this.handleChange(e,key)} />
+
+        *we just made up handleChange() so we write it ourselves
+
+        handleChange(e,key) {
+            const fish = this.props.fishes[key];
+            console.log(fish);
+        }
+
+-But were not able to actually edit fish information because we haven't updated state
+    -so we need to make a copy of that fish and update it with the new data
+    -we can do this witht he fish spread
+
+    {...fish}
+
+    -and then overlay our new properties on top of it, but we have to know what actually changed. We can do that with
+
+    console.log(e.target)
+
+    -this will give us the element that changed, and shows us why we needed to add the 'name' attribute to our element
+
+    console.log(e.target.name, e.target.value)
+
+    -name is the property we're updating and value is the new value we assigned
+    -so we can take this updated fish and overlay the new properties on it
+    -to do this we can use a 'computed property' -- [e.target.name] -- and this will allow us to change the property that
+     was changed
+
+    handleChange(e,key) {
+        const fish = this.props.fishes[key];
+        const updatedFish = {
+            ...fish,
+            [e.target.name]: e.target.value
+        }
+    }
+
+-But this still isn't updating our actual inventory so we need one more method.
+    -we need to to take 'const updatedFish' and pass it to <App />
+
+-Inside <App /> we need to make an updateFish() method
+
+    updateFish(key, updatedFish) {
+        const fishes={...this.state.fishes};
+        fishes[key] = updatedFish;
+        this.setState{( fishes )};
+    }
+
+-Then we need to pass updatedFish to <Inventory /> via props
+-Now we just need to copy the onChange handler to the other input fields
+
+************************* REVIEW ***************************
+
+*inside <Inventory /> we loop over the fishes object to create an array of keys to use in .map(), which we pass the
+ renderInventory(key) function.
+
+*inside renderInventory() we create a fish variable set to each fish in the mapped array based on key, and use map()
+ to loop over all the fish and output the form with all the property inputs of each fish.
+
+    const fish = this props.fishes[key]
+
+*on each input we have an onChange() event listener that takes the event (the change made) and the fish key and passes 
+ them to the handleChange(e,key) function, which again uses the key to target the individual fish thats been changed
+
+    const fish = this props.fishes[key]
+
+*Then inside the handleChange() function we make a copy of the fish object that was changed and overwrite the property
+ that was changed with the new value. We know which property was changed because we added 'name' attributes to each input.
+ So e.target.name will return the property changed, and e.target.value will return the new value.
+
+    const updatedFish = {
+        ...fish,
+        [e.target.name]: e.target.value
+    }
+
+*We then passed the newly updated fish object up to our updateFish(key, updatedFish) function in <App />. This function
+ takes the key (the position of the fish in the array of fishes) and the new fish Object
+
+*Inside the function we make a copy of all the fishes, which we do whenever we update state
+
+    const fishes = {...this.state.fishes};
+
+*We then overwrite the old fish with the newly updated one
+
+    fishes[key] = updatedFish;
+
+*And then we save our new state
+
+    this.setState({ fishes });
+
 
 
 
